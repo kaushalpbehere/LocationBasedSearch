@@ -1,65 +1,49 @@
-const requests = require('requests')
-const geoDistance = require('geo-distance-helper');
+const { forEach } = require('axios/lib/utils');
+var data=require('../src/data');
 
-const data=require('../src/data');
-
-const mapBoxUrl1 = 'https://api.mapbox.com/geocoding/v5/mapbox.places/'
-const mapBoxUrl2 = '.json?access_token=pk.eyJ1Ijoia2F1c2hhbHBiZWhlcmUiLCJhIjoiY2tuZWhza3pnMjY0czJ2dGFkb3FobGthcCJ9.PXoQLcnWXa8fyOWQ1i0PTg'
-
-exports.findUsersWithinSpecifiedRange=( distanceInKms, location)=>
+exports.findUsersWithinSpecifiedRange=(miles, location)=>
 {
-    console.log("Searching within " + distanceInKms + " miles from " + location + "...");
+    console.log("Searching within " + miles + " miles from " + location + "...");
+    
+    data.getLocationData(location).then(coordinateData => {
+        
+        /** To make application generic, we need to fetch details from the API as user can enter any location, which we might not know, but since in this case we have a location with is fixed, we can skip this part and use 'London' as a hard code value. */
+        const coordinatesData = coordinateData;
+        const locationDetails = {
+            latitude: '',
+            longitude: '',
+            placeName: ''
+        }
+        locationDetails.placeName = coordinatesData.features[0].place_name;
+        locationDetails.longitude = coordinatesData.features[0].center[0];
+        locationDetails.latitude = coordinatesData.features[0].center[1];
 
-    // Step 2: Get Latitude and Longitude for Location. 
-    getLocationData(location, (locationData) => {
-        // Location which was entered and Coordinated found for location:         
-        console.log("Entered Location: " + location) 
-        console.log("Found location: "+ locationData.placeName );
-        console.log("Latitude: "+ locationData.latitude);
-        console.log("Longitude: "+ locationData.longitude);
+        /* Note: data returned on the API is incorrect, as coordinates of user is nowhere near London for example. */
+        // Easy Part: Calling the second API 
+        data.fetchUsersByLocation(location).then(filteredUsers => { console.log(filteredUsers)});
 
-        var userData = data.fetchAllUsers().then(user => {
-            
-            const userLocation = {
-                lat: user.latitude,
-                lng: user.longitude
-              };
-          
-              const geoLocation = {
-                lat:  locationData.latitude,
-                lng: locationData.longitude
-              };
-          
-            const distanceInKms = geoDistance(userLocation, geoLocation, 'K');
-            
-            const miles = distanceInKms /  1.61; //1 Mile = 1.61 Kms 
-          
-            return miles <= distanceInKms;
+        // Custom filtering the user data to validate the user location. (Tuff part)
+        data.fetchAllUsers().then(eachUser=>{
+            console.log(' --- Correct User List: ---');
+            eachUser.forEach(x => 
+                //Time out is needed when we call some other api in a loop, as it can have invalid reply as 'Too many request'
+            setTimeout(()=>{
+                // 1 Degree Latitude / Longitude is 111 km / 69+ miles. 
+                var latitudeDifference = x.latitude - locationDetails.latitude;
+                var longitudeDifference = x.longitude -locationDetails.longitude;  
+
+                // As data is less, considering 2 degree change. (For accuracy it should be 1 degree)
+                if((latitudeDifference<=2  && latitudeDifference>=-2) 
+                    && (longitudeDifference <=2 && longitudeDifference >= -2))
+                    {
+                        console.log(x);
+                        /** Following part is still not working as call the mapbox api needs various other code to be handled. */
+                        // data.getDistance(x.latitude, x.longitude, locationDetails.longitude , locationDetails.latitude ).then(dist=>{
+                            //     if(dist <= miles) 
+                            //     return x;
+                            // });
+                }                
+            }, 300));          
         });
     });
-};
-
-// 1 : Get Coordinates
-const getLocationData = (address, callback) => {
-    requests(mapBoxUrl1 + address + mapBoxUrl2)
-        .on('data', (response) => {
-            const locationDetails = {
-                latitude: '',
-                longitude: '',
-                placeName: ''
-            }
-            try {
-                const coordinatesData = JSON.parse(response)
-                locationDetails.placeName = coordinatesData.features[0].place_name
-                locationDetails.longitude = coordinatesData.features[0].center[0]
-                locationDetails.latitude = coordinatesData.features[0].center[1]
-            } catch (exception) {
-                console.log('Exception encountered while retrieving coordinate data !!!')
-            }
-            callback(locationDetails);
-        })
-        .on('end', (error) => {
-            if (error)
-                return console.log('No internet or some network issue, please check whether you are connected to internet.', error);
-        });
 };

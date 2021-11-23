@@ -1,6 +1,8 @@
 const express = require('express');
 const yargs = require('yargs');
+
 var search=require('../src/search');
+var data1=require('../src/data');
 
 // initializing the express.
 const app = express();
@@ -29,12 +31,10 @@ const parameters =
         }
     }).help().alias('help', 'h').argv;
 
-
 // Starting the web server to listen to the server on port 3000
 app.listen(port, () => { 
-    console.log('Server Application is up and running on port : 3002 !!!');
-    
+    console.log('Server Application is up and running on port : 3002 !!!');    
     var miles = (parameters.m===undefined)?50:parameters.m;
     var location = (parameters.l === undefined) ? "London" : parameters.l;
-    search.findUsersWithinSpecifiedRange(miles, location);
+   search.findUsersWithinSpecifiedRange(miles, location);
 })
