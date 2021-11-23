@@ -38,3 +38,5 @@ app.listen(port, () => {
     var location = (parameters.l === undefined) ? "London" : parameters.l;
    search.findUsersWithinSpecifiedRange(miles, location);
 })
+
+module.exports = app;

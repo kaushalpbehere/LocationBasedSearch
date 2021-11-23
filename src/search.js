@@ -20,11 +20,12 @@ exports.findUsersWithinSpecifiedRange=(miles, location)=>
 
         /* Note: data returned on the API is incorrect, as coordinates of user is nowhere near London for example. */
         // Easy Part: Calling the second API 
+        console.log('--- Calling only DWP Api ---')
         data.fetchUsersByLocation(location).then(filteredUsers => { console.log(filteredUsers)});
 
         // Custom filtering the user data to validate the user location. (Tuff part)
         data.fetchAllUsers().then(eachUser=>{
-            console.log(' --- Correct User List: ---');
+            console.log(' --- Correct List of Users - DWP + Mapbox Api: ---');
             eachUser.forEach(x => 
                 //Time out is needed when we call some other api in a loop, as it can have invalid reply as 'Too many request'
             setTimeout(()=>{
@@ -43,7 +44,7 @@ exports.findUsersWithinSpecifiedRange=(miles, location)=>
                             //     return x;
                             // });
                 }                
-            }, 300));          
+            }, 300));        
         });
     });
 };
